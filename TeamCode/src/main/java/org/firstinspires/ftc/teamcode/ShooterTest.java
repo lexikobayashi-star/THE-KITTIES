@@ -10,11 +10,20 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 public class ShooterTest extends OpMode {
 
 DcMotor shooter;
+DcMotor indexer;
+DcMotor intake;
 
 boolean shooterFlag = false;
+boolean indexerFlag = false;
+boolean intakeFlag = false;
     @Override
     public void init() {
         shooter = hardwareMap.get(DcMotor.class, "shooter");
+        indexer = hardwareMap.get(DcMotor.class, "indexer");
+        intake = hardwareMap.get(DcMotor.class, "intake");
+
+
+
 
     }
 
@@ -29,6 +38,34 @@ boolean shooterFlag = false;
         }
         else{
             shooter.setPower(0);
+        }
+
+
+
+
+        if(gamepad1.bWasPressed()){
+            indexerFlag = !indexerFlag;
+        }
+        if (indexerFlag){
+            indexer.setPower(-1);
+
+        }
+        else{
+            indexer.setPower(0);
+        }
+
+
+
+
+        if(gamepad1.aWasPressed()){
+            intakeFlag = !intakeFlag;
+        }
+        if (intakeFlag){
+            intake.setPower(-1);
+
+        }
+        else{
+            intake.setPower(0);
         }
 
     }
