@@ -61,7 +61,7 @@ boolean intakeFlag = false;
             intakeFlag = !intakeFlag;
         }
         if (intakeFlag){
-            intake.setPower(-1);
+            intake.setPower(1);
 
         }
         else{
