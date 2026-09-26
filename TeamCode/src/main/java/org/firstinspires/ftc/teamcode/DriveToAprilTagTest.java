@@ -29,22 +29,19 @@
 
 package org.firstinspires.ftc.teamcode;
 
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.Range;
-import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.LLResultTypes;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
-
-import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 
 import java.util.List;
 
 @TeleOp(name="DriveToAprilTag", group = "testing")
 // @Disabled
-public class DriveToAprilTag extends LinearOpMode
+public class DriveToAprilTagTest extends LinearOpMode
 {
     // Adjust these numbers to suit your robot.
     final double DESIRED_DISTANCE_METERS = 0.305; //  this is how close the camera should get to the target (meters)
@@ -53,11 +50,9 @@ public class DriveToAprilTag extends LinearOpMode
     //  applied to the drive motors to correct the error.
     //  Drive = Error * Gain    Make these values smaller for smoother control, or larger for a more aggressive response.
     final double SPEED_GAIN  =  0.02  ;   //  Forward Speed Control "Gain". e.g. Ramp up to 50% power at a 25 inch error.   (0.50 / 25.0)
-    final double STRAFE_GAIN =  0.015 ;   //  Strafe Speed Control "Gain".  e.g. Ramp up to 37% power at a 25 degree Yaw error.   (0.375 / 25.0)
-    final double TURN_GAIN   =  0.01  ;   //  Turn Control "Gain".  e.g. Ramp up to 25% power at a 25 degree error. (0.25 / 25.0)
+    final double TURN_GAIN   =  0.01  ;   //  Turn Control "Gain".  Multiplies tx (degrees off-center) to get turn power.
 
     final double MAX_AUTO_SPEED = 0.5;   //  Clip the approach speed to this max value (adjust for your robot)
-    final double MAX_AUTO_STRAFE= 0.5;   //  Clip the strafing speed to this max value (adjust for your robot)
     final double MAX_AUTO_TURN  = 0.3;   //  Clip the turn speed to this max value (adjust for your robot)
 
     private DcMotor leftFrontDrive   = null;  //  Used to control the left front drive wheel
@@ -71,7 +66,7 @@ public class DriveToAprilTag extends LinearOpMode
     @Override public void runOpMode()
     {
         double  drive           = 0;        // Desired forward power/speed (-1 to +1)
-        double  strafe          = 0;        // Desired strafe power/speed (-1 to +1)
+        double  strafe          = 0;        // Desired strafe power/speed (-1 to +1) - unused in this simplified version
         double  turn            = 0;        // Desired turning power/speed (-1 to +1)
 
 
@@ -128,47 +123,34 @@ public class DriveToAprilTag extends LinearOpMode
 
             // Tell the driver what we see, and what to do.
             if (targetFound) {
-                telemetry.addData("\n>","HOLD Left-Bumper to Drive to Target\n");
+                telemetry.addData("\n>","HOLD Left-Bumper to Align to Target\n");
                 telemetry.addData("Found Tag ID", desiredTag.getFiducialId());
-                telemetry.addData("Target X", desiredTag.getTargetXDegrees());
-                telemetry.addData("Target Y", desiredTag.getTargetYDegrees());
+                telemetry.addData("Target X (tx)", desiredTag.getTargetXDegrees());
+                telemetry.addData("Target Y (ty)", desiredTag.getTargetYDegrees());
             } else {
                 telemetry.addData("\n>","Drive using joysticks to find valid target\n");
             }
 
-            // If Left Bumper is being pressed, AND we have found the desired target, Drive to target Automatically .
+            // If Left Bumper is being pressed, AND we have found the desired target, turn to align to it automatically.
             if (gamepad1.left_bumper && targetFound) {
-                Pose3D targetPose = desiredTag.getTargetPoseCameraSpace();
 
-                double x = targetPose.getPosition().x;
-                double z = targetPose.getPosition().z;
-
-// Limelight horizontal angle to target
+                // tx is how many degrees off-center (left/right) the tag is in the camera's view.
+                // Positive tx = tag is to the right. moveRobot() treats positive yaw as
+                // counter-clockwise (turn left), so we negate tx to turn right toward the tag.
+                // If the robot turns the wrong way when you test this, flip this sign.
                 double tx = desiredTag.getTargetXDegrees();
-                double rangeError = z - DESIRED_DISTANCE_METERS;
-                double strafeError = x;
-                double headingError = tx;
-                // Determine heading, range and Yaw (tag image rotation) error so we can use them to control the robot automatically.
-
-                drive = Range.clip(
-                        rangeError * SPEED_GAIN,
-                        -MAX_AUTO_SPEED,
-                        MAX_AUTO_SPEED
-                );
-
-                strafe = Range.clip(
-                        strafeError * STRAFE_GAIN,
-                        -MAX_AUTO_STRAFE,
-                        MAX_AUTO_STRAFE
-                );
 
                 turn = Range.clip(
-                        headingError * TURN_GAIN,
+                        -tx * TURN_GAIN,
                         -MAX_AUTO_TURN,
                         MAX_AUTO_TURN
                 );
 
-                telemetry.addData("Auto","Drive %5.2f, Strafe %5.2f, Turn %5.2f ", drive, strafe, turn);
+                // Keep it simple for now: only turning, no auto drive/strafe.
+                drive = 0;
+                strafe = 0;
+
+                telemetry.addData("Auto-Align","tx %5.2f  ->  Turn %5.2f ", tx, turn);
             } else {
 
                 // drive using manual POV Joystick mode.  Slow things down to make the robot more controlable.
